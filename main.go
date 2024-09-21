@@ -22,9 +22,11 @@ var (
 func getBestServer(hosts []string) []string {
 	var wg sync.WaitGroup
 	bestN := len(hosts) * 2 / 3
-	wg.Add(bestN)
+	wg.Add(len(hosts))
 	ch := make(chan string, bestN)
 	startTime := time.Now()
+	timeout := time.After(2 * time.Second)
+
 	for _, host := range hosts {
 		go func(host string) {
 			url := fmt.Sprintf("http://%s/speedtest/random750x750.jpg", host)
@@ -37,10 +39,20 @@ func getBestServer(hosts []string) []string {
 			}
 		}(host)
 	}
-	wg.Wait()
-	wg.Add(len(hosts))
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-timeout:
+	}
+
 	res := []string{}
-	for i := 0; i < bestN; i++ {
+	for i := 0; i < bestN && len(ch) > 0; i++ {
 		res = append(res, <-ch)
 	}
 	return res
