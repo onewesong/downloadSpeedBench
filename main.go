@@ -11,10 +11,6 @@ import (
 	"github.com/panjf2000/ants"
 )
 
-const (
-	bestN = 10
-)
-
 var (
 	IPListPtr    *[]string
 	SIZES        = []int{350, 500, 750, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4000, 4000, 4000}
@@ -25,13 +21,16 @@ var (
 
 func getBestServer(hosts []string) []string {
 	var wg sync.WaitGroup
+	bestN := len(hosts) * 2 / 3
 	wg.Add(bestN)
 	ch := make(chan string, bestN)
+	startTime := time.Now()
 	for _, host := range hosts {
 		go func(host string) {
 			url := fmt.Sprintf("http://%s/speedtest/random750x750.jpg", host)
 			resp, err := http.Get(url)
 			if err == nil && resp.StatusCode == 200 {
+				fmt.Printf("Select server: %s, Delay: %v\n", host, time.Since(startTime))
 				ch <- host
 				resp.Body.Close()
 				wg.Done()
